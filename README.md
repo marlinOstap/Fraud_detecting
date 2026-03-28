@@ -1,37 +1,23 @@
 # 💳 Credit Card Fraud Detection
 
-## 📌 Overview | Обзор
+## Overview
 
-**EN:**
-This project focuses on detecting fraudulent credit card transactions using machine learning techniques.
-The goal is to identify rare fraudulent operations in a highly imbalanced dataset.
+Проект по выявлению мошеннических транзакций с использованием методов машинного обучения.
 
-**RU:**
-Проект направлен на выявление мошеннических операций с банковскими картами с использованием методов машинного обучения.
-Цель состоит в том, чтобы идентифицировать редкие мошеннические транзакции в сильно несбалансированных данных.
+Задача характеризуется экстремальным дисбалансом классов (~0.17% мошенничества), что делает её близкой к реальным задачам в финтехе.
+
 ---
 
+## Data
 
+* Анонимизированные транзакции
+* 28 PCA-признаков (V1–V28)
+* Дополнительно: Time, Amount
+* Доля мошенничества: **~0.17%**
 
-## 📊 Dataset | Данные
+Dataset: https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
 
-**EN:**
-The dataset contains anonymized credit card transactions with a severe class imbalance.
-
-* Fraudulent transactions: **~0.17%**
-* Features: PCA-transformed (`V1–V28`) + `Time` and `Amount`
-Dataset is not included due to size limitations.
-
-**RU:**
-Датасет содержит анонимизированные транзакции по банковским картам с сильным дисбалансом классов.
-* Мошеннические транзакции: **~0.17%**
-* Признаки: PCA-преобразованные (`V1–V28`) + `Time` и `Amount`
-Данные не включены в репозиторий из-за размера.
-
-📥 Download / Скачать:
-https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
-
-
+---
 
 ## ⚙️ Project Structure | Структура проекта
 
@@ -47,87 +33,120 @@ Fraud_detecting/
 └── requirements.txt
 ```
 
+---
 
-## 🔍 EDA | Анализ данных
+## Problem
 
-**EN:**
-* Dataset structure analysis
-* Class imbalance analysis
-* Feature distribution comparison
-* Zero-amount transaction analysis
+* Сильный дисбаланс классов
+* Accuracy не является информативной метрикой
+* Критично минимизировать пропуск мошенничества (False Negative)
 
-**RU:**
-* Анализ структуры данных
-* Анализ дисбаланса классов
+---
+
+## Approach
+
+### EDA
+
+* Анализ распределения классов
 * Сравнение распределений признаков
-* Анализ транзакций с нулевой суммой
+* Анализ аномалий (включая zero-amount транзакции)
 
+### Modeling
 
+* Logistic Regression (class_weight='balanced')
+* Random Forest
+* XGBoost
 
-## 🧠 Models | Модели
+---
 
-* **Logistic Regression**
-  * `class_weight='balanced'`
+## Evaluation
 
-* **Random Forest**
-  * `n_estimators=100`
-  * `max_depth=10`
+Использованы метрики, устойчивые к дисбалансу:
 
-
-
-## 📈 Metrics | Метрики
 * ROC-AUC
-* Precision / Recall / F1-score
+* Precision / Recall
+* F1-score
 * Confusion Matrix
 
+---
 
+## Results
 
-## 📊 Results | Результаты
+### Logistic Regression
 
-**EN:**
-Both models successfully detect fraud despite strong imbalance.
+* ROC-AUC: **0.979**
+* Recall (fraud): **0.90**
+* Precision (fraud): **0.04**
 
-**RU:**
-Обе модели успешно выявляют мошеннические операции несмотря на сильный дисбаланс.
+👉 Модель хорошо находит мошенничество, но даёт много ложных срабатываний
 
+---
 
+### Random Forest
 
-## 🚀 How to Run | Как запустить
+* ROC-AUC: **0.977**
+* Recall (fraud): **0.75**
+* Precision (fraud): **0.96**
 
-1. Download dataset 
-2. Create `data/` folder / 
-3. Place file / 
-```
-data/creditcard.csv
-```
+👉 Лучший баланс: высокая точность при хорошем recall
 
-4. Run notebooks / Запустить ноутбуки:
+---
 
-```
-feature selection.ipynb → fraud_detection_models.ipynb
-```
+### XGBoost
 
+* ROC-AUC: **0.971**
+* Recall (fraud): **0.77**
+* Precision (fraud): **0.59**
 
+👉 Более сбалансированная модель, но уступает Random Forest по precision
 
-## 🛠️ Tech Stack
+---
 
-* Python
-* Pandas / NumPy
-* Scikit-learn
-* Matplotlib / Seaborn
+## Threshold Tuning
 
+Проанализировал влияние порога классификации (Random Forest):
 
+| Threshold | Recall | Precision | False Positives | Missed Fraud |
+| --------- | ------ | --------- | --------------- | ------------ |
+| 0.3       | 0.79   | 0.61      | 55              | 23           |
+| 0.5       | 0.75   | 0.96      | 3               | 27           |
+| 0.8       | 0.65   | 0.99      | 1               | 38           |
 
-## 💡 Key Takeaways | Выводы
+👉 Порог позволяет управлять балансом между:
 
-**EN:**
+* пропущенным мошенничеством
+* количеством ложных тревог
 
-* Fraud detection is a highly imbalanced problem
-* Accuracy is not a reliable metric
-* Recall and ROC-AUC are crucial
+---
 
-**RU:**
+## Key Insights
 
-* Задача сильно несбалансирована (~0.17% мошеннических транзакций
-* Поэтому accuracy не информативна
-* В таких условиях важнее метрики, отражающие способность модели находить мошенников, такие как Recall и ROC-AUC
+* Accuracy не подходит для задач с сильным дисбалансом
+* Recall критичен для минимизации финансовых потерь
+* Precision важен для снижения нагрузки на ручную проверку
+* Выбор порога — ключевой инструмент настройки модели под бизнес-задачу
+
+---
+
+## Business Perspective
+
+* Модель может использоваться как фильтр подозрительных транзакций
+* Позволяет снижать количество ручных проверок
+* Баланс precision/recall настраивается под уровень риска
+
+---
+
+## Tech Stack
+
+Python | Pandas | NumPy | scikit-learn | XGBoost | Matplotlib | Seaborn
+
+---
+
+## How to Run
+
+1. Скачать датасет
+2. Поместить в `data/creditcard.csv`
+3. Запустить:
+
+   * feature_selection.ipynb
+   * fraud_detection_models.ipynb
